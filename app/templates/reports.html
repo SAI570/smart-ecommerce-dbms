@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Reports{% endblock %}
+{% block body %}
+<h1>Reports</h1>
+{% if d.monthly is defined %}
+<div class="cols">
+<section class="card"><h2>Monthly revenue</h2>
+ {% set mx = (d.monthly|map(attribute='revenue')|map('float')|max) if d.monthly else 1 %}
+ <div class="bars">{% for m in d.monthly %}<div class="bar"><div class="fill" style="height: {{ (m.revenue|float / mx * 100)|round }}%"></div><span class="v">{{ (m.revenue|float/1000)|round(1) }}k</span><span class="l">{{ m.month }}</span></div>{% endfor %}</div>
+ <table><tr><th>Month</th><th class="n">Orders</th><th class="n">Revenue</th><th class="n">Avg order</th></tr>
+ {% for m in d.monthly %}<tr><td>{{ m.month }}</td><td class="n">{{ m.orders }}</td><td class="n">{{ m.revenue|money }}</td><td class="n">{{ m.avg_order_value|money }}</td></tr>{% endfor %}</table></section>
+<section class="card"><h2>Top 5 selling products</h2>
+ <table><tr><th>Product</th><th class="n">Units</th><th class="n">Revenue</th></tr>
+ {% for r in d.top %}<tr><td>{{ r.product_name }}</td><td class="n">{{ r.units_sold }}</td><td class="n">{{ r.revenue|money }}</td></tr>{% endfor %}</table>
+ <h2 style="margin-top:22px">Orders by status</h2>
+ <table><tr><th>Status</th><th class="n">Orders</th><th class="n">Share</th></tr>
+ {% for r in d.status %}<tr><td>{{ badge(r.order_status) }}</td><td class="n">{{ r.orders }}</td><td class="n">{{ r.pct }}%</td></tr>{% endfor %}</table></section>
+</div>
+<div class="cols">
+<section class="card"><h2>Sales by customer</h2><table><tr><th>Customer</th><th>City</th><th class="n">Orders</th><th class="n">Spent</th></tr>
+ {% for r in d.by_customer %}<tr><td>{{ r.name }}</td><td>{{ r.city }}</td><td class="n">{{ r.orders_placed }}</td><td class="n">{{ r.total_spent|money }}</td></tr>{% endfor %}</table></section>
+<section class="card"><h2>Sales by product</h2><table><tr><th>Product</th><th>Category</th><th class="n">Units</th><th class="n">Revenue</th></tr>
+ {% for r in d.by_product %}<tr><td>{{ r.product_name }}</td><td>{{ r.category }}</td><td class="n">{{ r.units_sold }}</td><td class="n">{{ r.revenue|money }}</td></tr>{% endfor %}</table></section>
+</div>
+{% endif %}
+<section class="card"><h2>Low-stock list</h2>
+{% if d.low %}<table><tr><th>Product</th><th class="n">Available</th><th class="n">Reorder level</th><th>Supplier</th><th>Open PO</th></tr>
+{% for r in d.low %}<tr><td>{{ r.product_name }}</td><td class="n">{{ r.total_available }}</td><td class="n">{{ r.reorder_level }}</td><td>{{ r.supplier_name }}</td><td>{{ 'Yes' if r.has_open_po else 'No' }}</td></tr>{% endfor %}</table>
+{% else %}<p class="muted">No product is below its reorder level.</p>{% endif %}</section>
+<section class="card"><h2>Supplier delivery performance</h2>
+<table><tr><th>Supplier</th><th class="n">Promised lead time</th><th class="n">POs received</th><th class="n">Open</th><th class="n">Cancelled</th><th class="n">Avg actual days</th><th class="n">Avg delay</th><th class="n">On-time</th></tr>
+{% for r in d.suppliers %}<tr><td>{{ r.supplier_name }}</td><td class="n">{{ r.lead_time_days }} d</td><td class="n">{{ r.pos_received }}</td><td class="n">{{ r.pos_open }}</td><td class="n">{{ r.pos_cancelled }}</td>
+<td class="n">{{ r.avg_actual_days if r.avg_actual_days is not none else '-' }}</td><td class="n">{{ r.avg_delay_days if r.avg_delay_days is not none else '-' }}</td>
+<td class="n">{% if r.on_time_pct is not none %}{{ r.on_time_pct }}%{% else %}-{% endif %}</td></tr>{% endfor %}</table></section>
+{% if d.by_wh is defined %}
+<section class="card"><h2>Warehouse utilisation</h2><table><tr><th>Warehouse</th><th class="n">Units held</th><th class="n">Capacity</th><th>Used</th></tr>
+{% for r in d.by_wh %}<tr><td>{{ r.warehouse_name }}</td><td class="n">{{ r.load }}</td><td class="n">{{ r.capacity }}</td><td><div class="meter"><i style="width: {{ (r.load / r.capacity * 100)|round(1) }}%"></i></div></td></tr>{% endfor %}</table></section>
+{% endif %}
+{% endblock %}

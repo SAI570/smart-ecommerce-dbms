@@ -1,0 +1,15 @@
+{% extends "base.html" %}{% from "_macros.html" import field %}
+{% block title %}Warehouses{% endblock %}
+{% block body %}
+<h1>Warehouses</h1>
+<section class="card"><table>
+<tr><th>ID</th><th>Warehouse</th><th>City</th><th class="n">Product lines</th><th>Capacity used</th></tr>
+{% for r in rows %}<tr><td>{{ r.warehouse_id }}</td><td>{{ r.warehouse_name }}</td><td>{{ r.city or '-' }}</td><td class="n">{{ r.products }}</td>
+<td><div class="meter"><i style="width: {{ (r.load / r.capacity * 100)|round(1) }}%"></i></div><span class="tiny muted">{{ r.load }} / {{ r.capacity }} units</span></td></tr>{% endfor %}
+</table></section>
+<form method="post" class="card form inline">
+  <h2>Add warehouse</h2>
+  {{ field('Name','warehouse_name', required=True) }}{{ field('City','city') }}{{ field('Capacity (units)','capacity', '', 'number', True, 'min="1"') }}
+  <button class="btn primary">Add</button>
+</form>
+{% endblock %}

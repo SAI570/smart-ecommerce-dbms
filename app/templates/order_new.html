@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}New order{% endblock %}
+{% block body %}
+<h1>Place an order</h1>
+<form method="post" class="card" id="orderForm">
+  {% if role=='admin' %}
+  <label class="row-label">Customer<select name="customer_id" required>{% for c in custs %}<option value="{{ c.customer_id }}">{{ c.name }}</option>{% endfor %}</select></label>
+  {% endif %}
+  <table id="lines"><tr><th>Product</th><th class="n">Unit price</th><th class="n">In stock</th><th class="n">Quantity</th><th class="n">Line total</th><th></th></tr></table>
+  <button type="button" class="btn" onclick="addLine()">+ Add product</button>
+  <div class="total">Order total: <b id="grand">₹0.00</b></div>
+  <p class="tiny muted">The database picks the warehouse for every item (largest stock first, splitting across warehouses if needed), reserves the stock and rejects the whole order if any item is short.</p>
+  <div class="actions"><button class="btn primary">Place order</button></div>
+</form>
+<script>
+const P = [
+{% for p in prods %}{id: {{ p.product_id }}, name: {{ p.product_name|tojson }}, price: {{ p.unit_price|float }}, stock: {{ p.total_available }}},
+{% endfor %}];
+const pre = {{ pre|tojson }};
+function addLine(sel) {
+  const t = document.getElementById('lines'), r = t.insertRow();
+  r.innerHTML = '<td><select name="product_id">' + P.map(p => `<option value="${p.id}" ${p.id===sel?'selected':''} ${p.stock===0?'disabled':''}>${p.name}${p.stock===0?' (out of stock)':''}</option>`).join('') +
+    '</select></td><td class="n price"></td><td class="n stock"></td><td class="n"><input type="number" name="quantity" min="1" value="1"></td><td class="n lt"></td><td><button type="button" class="btn small" onclick="this.closest(\'tr\').remove();calc()">✕</button></td>';
+  r.querySelectorAll('select,input').forEach(e => e.addEventListener('input', calc));
+  calc();
+}
+function calc() {
+  let sum = 0;
+  document.querySelectorAll('#lines tr').forEach((r, i) => {
+    if (!i) return;
+    const p = P.find(x => x.id == r.querySelector('select').value), q = +r.querySelector('input').value || 0;
+    r.querySelector('.price').textContent = '₹' + p.price.toFixed(2);
+    r.querySelector('.stock').textContent = p.stock;
+    r.querySelector('.lt').textContent = '₹' + (p.price * q).toFixed(2);
+    sum += p.price * q;
+  });
+  document.getElementById('grand').textContent = '₹' + sum.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+addLine(pre || undefined);
+</script>
+{% endblock %}

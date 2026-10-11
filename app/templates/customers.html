@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Customers{% endblock %}
+{% block body %}
+<div class="head"><h1>Customers</h1><a class="btn primary" href="{{ url_for('customer_form') }}">+ Register customer</a></div>
+<section class="card"><table>
+<tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>City</th><th>Registered</th><th>Status</th><th class="n">Orders</th><th></th></tr>
+{% for r in rows %}<tr><td>{{ r.customer_id }}</td><td>{{ r.name }}</td><td>{{ r.email }}</td><td>{{ r.phone or '-' }}</td><td>{{ r.city or '-' }}</td>
+<td>{{ r.registered_date|d }}</td><td>{{ badge(r.status) }}</td><td class="n">{{ r.orders }}</td>
+<td><a href="{{ url_for('customer_form', cid=r.customer_id) }}">Edit</a></td></tr>{% endfor %}
+</table></section>
+{% endblock %}

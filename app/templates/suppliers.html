@@ -1,0 +1,11 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Suppliers{% endblock %}
+{% block body %}
+<div class="head"><h1>Suppliers</h1>{% if role=='admin' %}<a class="btn primary" href="{{ url_for('supplier_form') }}">+ Add supplier</a>{% endif %}</div>
+<section class="card"><table>
+<tr><th>ID</th><th>Supplier</th><th>Email</th><th>Phone</th><th class="n">Lead time</th><th class="n">Products</th><th>Status</th><th></th></tr>
+{% for r in rows %}<tr><td>{{ r.supplier_id }}</td><td>{{ r.supplier_name }}</td><td>{{ r.email or '-' }}</td><td>{{ r.phone or '-' }}</td>
+<td class="n">{{ r.lead_time_days }} days</td><td class="n">{{ r.products }}</td><td>{{ badge(r.status) }}</td>
+<td>{% if role=='admin' %}<a href="{{ url_for('supplier_form', sid=r.supplier_id) }}">Edit</a>{% endif %}</td></tr>{% endfor %}
+</table></section>
+{% endblock %}

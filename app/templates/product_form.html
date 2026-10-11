@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% from "_macros.html" import field %}
+{% block title %}Product{% endblock %}
+{% block body %}
+<h1>{{ 'Edit product' if pid else 'Add product' }}</h1>
+<form method="post" class="card form">
+  {{ field('Product name','product_name', row.product_name if row, required=True) }}
+  {{ field('Category','category', row.category if row) }}
+  {{ field('Brand','brand', row.brand if row) }}
+  {{ field('Unit price (₹)','unit_price', row.unit_price if row, 'number', True, 'min="0.01" step="0.01"') }}
+  {{ field('Reorder level','reorder_level', row.reorder_level if row else 10, 'number', True, 'min="0"') }}
+  <label>Main supplier<select name="supplier_id" required>
+    {% for s in sups %}<option value="{{ s.supplier_id }}" {{ 'selected' if row and row.supplier_id==s.supplier_id }}>{{ s.supplier_name }}</option>{% endfor %}</select></label>
+  <p class="tiny muted">Changing the price does not change past orders: each order line keeps the price at the time of sale.</p>
+  <div class="actions"><button class="btn primary">Save</button><a class="btn" href="{{ url_for('products') }}">Cancel</a></div>
+</form>
+{% endblock %}

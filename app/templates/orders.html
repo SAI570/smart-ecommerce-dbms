@@ -1,0 +1,20 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Orders{% endblock %}
+{% block body %}
+<div class="head"><h1>{{ 'My orders' if role=='customer' else ('Orders to ship' if role=='warehouse' and not status else 'Orders') }}</h1>
+{% if role in ('admin','customer') %}<a class="btn primary" href="{{ url_for('new_order') }}">+ New order</a>{% endif %}</div>
+<form class="filters" method="get">
+  <select name="status" onchange="this.form.submit()"><option value="">{{ 'Open orders' if role=='warehouse' else 'All statuses' }}</option>
+  {% for s in ['PLACED','CONFIRMED','SHIPPED','DELIVERED','CANCELLED'] %}<option {{ 'selected' if s==status }}>{{ s }}</option>{% endfor %}</select>
+</form>
+<section class="card"><table>
+<tr><th>#</th><th>Date</th>{% if role!='customer' %}<th>Customer</th>{% endif %}<th>Status</th><th>Payment</th><th class="n">Total</th><th></th></tr>
+{% for o in rows %}<tr><td><a href="{{ url_for('order_detail', oid=o.order_id) }}">#{{ o.order_id }}</a></td><td>{{ o.order_date|dt }}</td>
+{% if role!='customer' %}<td>{{ o.customer_name }}<span class="tiny muted"> · {{ o.city }}</span></td>{% endif %}
+<td>{{ badge(o.order_status) }}</td><td>{{ badge(o.payment_status) }} <span class="tiny muted">{{ o.payment_method if o.payment_method!='-' }}</span></td><td class="n">{{ o.total_amount|money }}</td>
+<td class="act">
+{% if role in ('admin','warehouse') and o.order_status=='CONFIRMED' %}<form method="post" action="{{ url_for('order_action', oid=o.order_id, action='ship') }}"><input type="hidden" name="next" value="{{ request.full_path }}"><button class="btn small">Mark shipped</button></form>{% endif %}
+{% if role in ('admin','warehouse') and o.order_status=='SHIPPED' %}<form method="post" action="{{ url_for('order_action', oid=o.order_id, action='deliver') }}"><input type="hidden" name="next" value="{{ request.full_path }}"><button class="btn small">Mark delivered</button></form>{% endif %}
+</td></tr>{% else %}<tr><td colspan="7" class="muted">No orders.</td></tr>{% endfor %}
+</table></section>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Inventory{% endblock %}
+{% block body %}
+<h1>Inventory by warehouse</h1>
+{% if low %}
+<section class="card alert">
+  <h2>Low-stock alerts <span class="tiny muted">total stock across all warehouses is below the product's reorder level</span></h2>
+  <table><tr><th>Product</th><th class="n">Total available</th><th class="n">Reorder level</th><th>Supplier</th><th>Restock</th></tr>
+  {% for r in low %}<tr><td>{{ r.product_name }}</td><td class="n">{{ r.total_available }}</td><td class="n">{{ r.reorder_level }}</td><td>{{ r.supplier_name }} ({{ r.lead_time_days }} d)</td>
+  <td>{% if r.has_open_po %}{{ badge('PO raised') }}{% else %}{{ badge('needed') }}{% endif %}</td></tr>{% endfor %}</table>
+</section>
+{% endif %}
+<form class="filters" method="get">
+  <select name="warehouse" onchange="this.form.submit()"><option value="">All warehouses</option>
+  {% for w in whs %}<option value="{{ w.warehouse_id }}" {{ 'selected' if wh==w.warehouse_id|string }}>{{ w.warehouse_name }}</option>{% endfor %}</select>
+</form>
+<section class="card"><table>
+<tr><th>Product</th><th>Warehouse</th><th class="n">Available</th><th class="n">Reserved</th><th>Last updated</th><th>Set available quantity</th></tr>
+{% for r in rows %}<tr><td>{{ r.product_name }}</td><td>{{ r.warehouse_name }}</td><td class="n">{{ r.quantity_available }}</td><td class="n">{{ r.quantity_reserved }}</td><td>{{ r.last_updated|dt }}</td>
+<td><form method="post" class="mini"><input type="hidden" name="product_id" value="{{ r.product_id }}"><input type="hidden" name="warehouse_id" value="{{ r.warehouse_id }}">
+<input type="number" name="quantity" min="0" value="{{ r.quantity_available }}"><button class="btn small">Save</button></form></td></tr>{% endfor %}
+</table></section>
+<form method="post" class="card form inline">
+  <h2>Stock a product in a warehouse</h2>
+  <label>Product<select name="product_id">{% for p in prods %}<option value="{{ p.product_id }}">{{ p.product_name }}</option>{% endfor %}</select></label>
+  <label>Warehouse<select name="warehouse_id">{% for w in whs %}<option value="{{ w.warehouse_id }}">{{ w.warehouse_name }}</option>{% endfor %}</select></label>
+  <label>Quantity<input type="number" name="quantity" min="0" value="0" required></label>
+  <button class="btn primary">Set stock</button>
+</form>
+<p class="tiny muted">Stock changes go through the <code>set_stock</code> procedure, which refuses to exceed a warehouse's capacity. Any decrease that takes a product below its reorder level raises a purchase order automatically (trigger).</p>
+{% endblock %}

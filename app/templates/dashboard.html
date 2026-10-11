@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Dashboard{% endblock %}
+{% block body %}
+<h1>Dashboard</h1>
+<div class="kpis">
+  <div class="kpi"><span>Revenue (confirmed+)</span><b>{{ kpi.revenue|money }}</b></div>
+  <div class="kpi"><span>Orders</span><b>{{ kpi.orders }}</b></div>
+  <div class="kpi {{ 'warn' if kpi.unpaid }}"><span>Awaiting payment</span><b>{{ kpi.unpaid }}</b></div>
+  <div class="kpi"><span>Active customers</span><b>{{ kpi.customers }}</b></div>
+  <div class="kpi {{ 'warn' if kpi.low_stock }}"><span>Low-stock products</span><b>{{ kpi.low_stock }}</b></div>
+  <div class="kpi"><span>Open purchase orders</span><b>{{ kpi.open_pos }}</b></div>
+</div>
+<div class="cols">
+  <section class="card">
+    <h2>Monthly revenue</h2>
+    {% set mx = (months|map(attribute='revenue')|map('float')|max) if months else 1 %}
+    <div class="bars">
+      {% for m in months %}
+        <div class="bar"><div class="fill" style="height: {{ (m.revenue|float / mx * 100)|round }}%"></div><span class="v">{{ (m.revenue|float / 1000)|round(1) }}k</span><span class="l">{{ m.month }}</span></div>
+      {% endfor %}
+    </div>
+  </section>
+  <section class="card">
+    <h2>Low stock <a class="more" href="{{ url_for('inventory') }}">Inventory ›</a></h2>
+    {% if low %}
+    <table><tr><th>Product</th><th class="n">Stock</th><th class="n">Reorder at</th><th>PO</th></tr>
+    {% for r in low %}<tr><td>{{ r.product_name }}</td><td class="n">{{ r.total_available }}</td><td class="n">{{ r.reorder_level }}</td>
+      <td>{% if r.has_open_po %}{{ badge('ordered') }}{% else %}{{ badge('needed') }}{% endif %}</td></tr>{% endfor %}
+    </table>
+    {% else %}<p class="muted">All products are above their reorder level.</p>{% endif %}
+  </section>
+</div>
+<section class="card">
+  <h2>Recent orders <a class="more" href="{{ url_for('orders') }}">All orders ›</a></h2>
+  <table><tr><th>#</th><th>Date</th><th>Customer</th><th>Status</th><th>Payment</th><th class="n">Total</th></tr>
+  {% for o in recent %}<tr><td><a href="{{ url_for('order_detail', oid=o.order_id) }}">#{{ o.order_id }}</a></td><td>{{ o.order_date|d }}</td><td>{{ o.customer_name }}</td>
+    <td>{{ badge(o.order_status) }}</td><td>{{ badge(o.payment_status) }}</td><td class="n">{{ o.total_amount|money }}</td></tr>{% endfor %}
+  </table>
+</section>
+{% endblock %}

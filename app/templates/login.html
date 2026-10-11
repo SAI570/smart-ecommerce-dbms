@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Sign in{% endblock %}
+{% block login %}
+<div class="login-card">
+  <div class="brand big"><span class="logo">▣</span> Smart Commerce</div>
+  <p class="muted">Order, inventory & supply-chain management on a relational database. Choose a user type to continue. Each type connects to PostgreSQL under its own database role, so permissions are enforced by the database.</p>
+  <form method="post" class="stack">
+    <label>I am a
+      <select name="role" id="role" onchange="document.getElementById('cust').style.display = this.value==='customer' ? 'block':'none'">
+        {% for k, v in roles.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
+      </select>
+    </label>
+    <label id="cust" style="display:none">Which customer?
+      <select name="customer_id">
+        {% for c in customers %}<option value="{{ c.customer_id }}">{{ c.name }} — {{ c.city }}</option>{% endfor %}
+      </select>
+    </label>
+    <button class="btn primary">Continue</button>
+  </form>
+  <p class="tiny muted">Prototype for BCSE302L Database Systems. No passwords: this is a demo of the database, not of authentication.</p>
+</div>
+{% endblock %}

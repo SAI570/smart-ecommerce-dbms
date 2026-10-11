@@ -1,0 +1,13 @@
+{% extends "base.html" %}{% from "_macros.html" import field %}
+{% block title %}Supplier{% endblock %}
+{% block body %}
+<h1>{{ 'Edit supplier' if sid else 'Add supplier' }}</h1>
+<form method="post" class="card form">
+  {{ field('Supplier name','supplier_name', row.supplier_name if row, required=True) }}
+  {{ field('Email','email', row.email if row) }}
+  {{ field('Phone','phone', row.phone if row) }}
+  {{ field('Delivery lead time (days)','lead_time_days', row.lead_time_days if row, 'number', True, 'min="1"') }}
+  <label>Status<select name="status">{% for s in ['ACTIVE','INACTIVE'] %}<option {{ 'selected' if row and row.status==s }}>{{ s }}</option>{% endfor %}</select></label>
+  <div class="actions"><button class="btn primary">Save</button><a class="btn" href="{{ url_for('suppliers') }}">Cancel</a></div>
+</form>
+{% endblock %}

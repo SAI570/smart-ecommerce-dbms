@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Purchase orders{% endblock %}
+{% block body %}
+<div class="head"><h1>Purchase orders</h1>
+{% if role in ('admin','procurement') %}<div class="btns">
+ <form method="post" action="{{ url_for('po_check') }}"><button class="btn">Run reorder check</button></form>
+ <a class="btn primary" href="{{ url_for('po_new') }}">+ New purchase order</a></div>{% endif %}</div>
+{% if low and role!='warehouse' %}
+<section class="card alert"><h2>Products below reorder level</h2>
+<table><tr><th>Product</th><th class="n">Stock</th><th class="n">Reorder at</th><th>Supplier</th><th>Status</th></tr>
+{% for r in low %}<tr><td>{{ r.product_name }}</td><td class="n">{{ r.total_available }}</td><td class="n">{{ r.reorder_level }}</td><td>{{ r.supplier_name }}</td>
+<td>{% if r.has_open_po %}{{ badge('PO raised') }}{% else %}{{ badge('needed') }}{% endif %}</td></tr>{% endfor %}</table>
+<p class="tiny muted">"Run reorder check" runs the cursor procedure that creates a PO for each low product that has none open.</p></section>
+{% endif %}
+<form class="filters" method="get"><select name="status" onchange="this.form.submit()"><option value="">All statuses</option>
+{% for s in ['CREATED','RECEIVED','CANCELLED'] %}<option {{ 'selected' if s==status }}>{{ s }}</option>{% endfor %}</select></form>
+<section class="card"><table>
+<tr><th>PO</th><th>Product</th><th>Supplier</th><th>Deliver to</th><th class="n">Qty</th><th>PO date</th><th>Expected</th><th>Received</th><th>Status</th><th></th></tr>
+{% for r in rows %}<tr><td>#{{ r.po_id }}</td><td>{{ r.product_name }}</td><td>{{ r.supplier_name }}</td><td>{{ r.warehouse_name }}</td><td class="n">{{ r.quantity_ordered }}</td>
+<td>{{ r.po_date|d }}</td><td>{{ r.expected_delivery|d }}{% if r.overdue %} <span class="low">overdue</span>{% endif %}</td><td>{{ r.actual_delivery|d }}</td><td>{{ badge(r.po_status) }}</td>
+<td class="act">{% if r.po_status=='CREATED' %}
+ {% if role in ('admin','warehouse') %}<form method="post" action="{{ url_for('po_action', po_id=r.po_id, action='receive') }}"><button class="btn small primary">Receive</button></form>{% endif %}
+ {% if role in ('admin','procurement') %}<form method="post" action="{{ url_for('po_action', po_id=r.po_id, action='cancel') }}" onsubmit="return confirm('Cancel PO #{{ r.po_id }}?')"><button class="btn small">Cancel</button></form>{% endif %}
+{% endif %}</td></tr>{% endfor %}
+</table></section>
+{% endblock %}

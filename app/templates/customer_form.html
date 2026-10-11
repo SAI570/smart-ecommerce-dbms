@@ -1,0 +1,14 @@
+{% extends "base.html" %}{% from "_macros.html" import field %}
+{% block title %}Customer{% endblock %}
+{% block body %}
+<h1>{{ 'Edit customer' if cid else 'Register customer' }}</h1>
+<form method="post" class="card form">
+  {{ field('Full name','name', row.name if row, required=True) }}
+  {{ field('Email','email', row.email if row, 'email', True) }}
+  {{ field('Phone','phone', row.phone if row) }}
+  {{ field('Address','address', row.address if row) }}
+  {{ field('City','city', row.city if row) }}
+  <label>Status<select name="status">{% for s in ['ACTIVE','INACTIVE'] %}<option {{ 'selected' if row and row.status==s }}>{{ s }}</option>{% endfor %}</select></label>
+  <div class="actions"><button class="btn primary">Save</button><a class="btn" href="{{ url_for('customers') }}">Cancel</a></div>
+</form>
+{% endblock %}

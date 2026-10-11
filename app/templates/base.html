@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Smart E-Commerce{% endblock %} · Order, Inventory & Supply Chain</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if role %}
+<div class="layout">
+  <aside class="side">
+    <div class="brand"><span class="logo">▣</span> Smart Commerce<small>Order · Inventory · Supply</small></div>
+    <nav>
+      {% for ep, label in nav %}
+        <a href="{{ url_for(ep) }}" class="{{ 'on' if request.endpoint == ep or request.endpoint == ep + '_form' else '' }}">{{ label }}</a>
+      {% endfor %}
+    </nav>
+    <div class="who">
+      <div class="who-role">{{ role_label }}</div>
+      {% if customer_name %}<div class="who-name">{{ customer_name }}</div>{% endif %}
+      <a href="{{ url_for('logout') }}">Switch user ›</a>
+    </div>
+  </aside>
+  <main class="main">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block body %}{% endblock %}
+  </main>
+</div>
+{% else %}
+  <main class="login-wrap">
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% for cat, m in msgs %}<div class="flash {{ cat }}">{{ m }}</div>{% endfor %}
+    {% endwith %}
+    {% block login %}{% endblock %}
+  </main>
+{% endif %}
+</body>
+</html>

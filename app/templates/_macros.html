@@ -1,0 +1,4 @@
+{% macro badge(s) %}<span class="badge b-{{ s|lower|replace(' ', '-') }}">{{ s }}</span>{% endmacro %}
+{% macro field(label, name, value='', type='text', required=False, extra='') %}
+<label>{{ label }}<input type="{{ type }}" name="{{ name }}" value="{{ value if value is not none else '' }}" {{ 'required' if required }} {{ extra|safe }}></label>
+{% endmacro %}

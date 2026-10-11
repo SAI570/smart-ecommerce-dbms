@@ -1,0 +1,12 @@
+{% extends "base.html" %}{% from "_macros.html" import field %}
+{% block title %}New purchase order{% endblock %}
+{% block body %}
+<h1>New purchase order</h1>
+<form method="post" class="card form">
+  <label>Product<select name="product_id">{% for p in prods %}<option value="{{ p.product_id }}">{{ p.product_name }}</option>{% endfor %}</select></label>
+  <label>Deliver to warehouse<select name="warehouse_id">{% for w in whs %}<option value="{{ w.warehouse_id }}">{{ w.warehouse_name }}</option>{% endfor %}</select></label>
+  {{ field('Quantity','quantity','', 'number', True, 'min="1"') }}
+  <p class="tiny muted">The supplier is the product's main supplier; the expected date is today plus that supplier's lead time.</p>
+  <div class="actions"><button class="btn primary">Create PO</button><a class="btn" href="{{ url_for('purchase_orders') }}">Cancel</a></div>
+</form>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}{% from "_macros.html" import badge %}
+{% block title %}Order #{{ o.order_id }}{% endblock %}
+{% block body %}
+<div class="head"><h1>Order #{{ o.order_id }} {{ badge(o.order_status) }}</h1><a class="btn" href="{{ url_for('orders') }}">‹ Orders</a></div>
+<div class="cols">
+<section class="card">
+  <h2>Summary</h2>
+  <dl class="kv"><dt>Customer</dt><dd>{{ o.customer_name }} · {{ o.city }}</dd>
+  <dt>Placed</dt><dd>{{ o.order_date|dt }}</dd>
+  <dt>Payment</dt><dd>{{ badge(o.payment_status) }} {{ o.payment_method if o.payment_method!='-' }}</dd>
+  <dt>Total</dt><dd><b>{{ o.total_amount|money }}</b></dd></dl>
+  <div class="flow">
+    {% set steps = ['PLACED','CONFIRMED','SHIPPED','DELIVERED'] %}
+    {% for s in steps %}<span class="step {{ 'done' if o.order_status != 'CANCELLED' and steps.index(o.order_status) >= loop.index0 }}">{{ s }}</span>{% endfor %}
+    {% if o.order_status=='CANCELLED' %}<span class="step bad">CANCELLED</span>{% endif %}
+  </div>
+</section>
+<section class="card">
+  <h2>Actions</h2>
+  {% if o.order_status=='PLACED' and role in ('admin','customer') %}
+  <form method="post" action="{{ url_for('order_action', oid=o.order_id, action='pay') }}" class="stack">
+    <label>Payment method<select name="method">{% for m in ['UPI','CARD','NETBANKING','COD'] %}<option>{{ m }}</option>{% endfor %}</select></label>
+    <label class="check"><input type="checkbox" name="success" checked> Simulate a successful gateway response<span class="tiny muted"> (untick to see a failed payment)</span></label>
+    <button class="btn primary">Pay {{ o.total_amount|money }}</button>
+  </form>
+  {% endif %}
+  {% if o.order_status in ('PLACED','CONFIRMED') and role in ('admin','customer') %}
+  <form method="post" action="{{ url_for('order_action', oid=o.order_id, action='cancel') }}" onsubmit="return confirm('Cancel this order and release its stock?')"><button class="btn danger">Cancel order</button></form>
+  {% endif %}
+  {% if o.order_status=='CONFIRMED' and role in ('admin','warehouse') %}
+  <form method="post" action="{{ url_for('order_action', oid=o.order_id, action='ship') }}"><button class="btn primary">Mark shipped</button></form>{% endif %}
+  {% if o.order_status=='SHIPPED' and role in ('admin','warehouse') %}
+  <form method="post" action="{{ url_for('order_action', oid=o.order_id, action='deliver') }}"><button class="btn primary">Mark delivered</button></form>{% endif %}
+  {% if o.order_status in ('DELIVERED','CANCELLED') %}<p class="muted">This order is closed.</p>{% endif %}
+</section>
+</div>
+<section class="card"><h2>Items</h2><table>
+<tr><th>Product</th><th>Fulfilled from</th><th class="n">Qty</th><th class="n">Unit price (at sale)</th><th class="n">Line total</th></tr>
+{% for i in items %}<tr><td>{{ i.product_name }}</td><td>{{ i.warehouse_name }}</td><td class="n">{{ i.quantity }}</td><td class="n">{{ i.unit_price|money }}</td><td class="n">{{ i.line_total|money }}</td></tr>{% endfor %}
+<tr class="sum"><td colspan="4">Total</td><td class="n">{{ o.total_amount|money }}</td></tr></table></section>
+{% endblock %}
