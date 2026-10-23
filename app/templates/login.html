@@ -1,22 +1,89 @@
 {% extends "base.html" %}
-{% block title %}Sign in{% endblock %}
+{% block title %}Sign In · Identify Role & Access{% endblock %}
 {% block login %}
-<div class="login-card">
+<div class="login-card" style="max-width: 520px; margin: auto;">
   <div class="brand big"><span class="logo">▣</span> Smart Commerce</div>
-  <p class="muted">Order, inventory & supply-chain management on a relational database. Choose a user type to continue. Each type connects to PostgreSQL under its own database role, so permissions are enforced by the database.</p>
-  <form method="post" class="stack">
-    <label>I am a
-      <select name="role" id="role" onchange="document.getElementById('cust').style.display = this.value==='customer' ? 'block':'none'">
-        {% for k, v in roles.items() %}<option value="{{ k }}">{{ v }}</option>{% endfor %}
-      </select>
+  <p class="muted" style="margin-top: -6px; font-size: 14px;">
+    Enterprise Order, Inventory & Multi-Warehouse Supply Chain Management.
+  </p>
+
+  <div id="role-pill" class="badge" style="padding: 6px 14px; font-size: 13px; align-self: flex-start; display: none;">
+    <span id="role-text">Identified Role: -</span>
+  </div>
+
+  <form method="post" action="{{ url_for('login') }}" class="stack" style="max-width: 100%; gap: 14px;">
+    <label>Email, Username or Phone
+      <input type="text" name="login_id" id="login_id" placeholder="e.g. admin@smartcommerce.com or aarav.reddy@mail.com" value="{{ pre_login or '' }}" required autofocus oninput="detectRole(this.value)">
     </label>
-    <label id="cust" style="display:none">Which customer?
-      <select name="customer_id">
-        {% for c in customers %}<option value="{{ c.customer_id }}">{{ c.name }} — {{ c.city }}</option>{% endfor %}
-      </select>
+
+    <label>Password
+      <input type="password" name="password" id="password" placeholder="Enter your password" required>
     </label>
-    <button class="btn primary">Continue</button>
+
+    <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 4px;">
+      <button type="submit" class="btn primary" style="flex: 1; padding: 10px; font-size: 15px;">Sign In ›</button>
+      <a href="{{ url_for('register') }}" class="btn" style="padding: 10px 14px; text-align: center; text-decoration: none;">New Customer? Register</a>
+    </div>
   </form>
-  <p class="tiny muted">Prototype for BCSE302L Database Systems. No passwords: this is a demo of the database, not of authentication.</p>
+
+  <div style="border-top: 1px solid var(--line); margin-top: 10px; padding-top: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+      <strong style="font-size: 13.5px; color: var(--ink);">Demo Credentials (Click to Auto-Fill & Test)</strong>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      {% for s in samples %}
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font-size: 13px;">
+        <div>
+          <span class="badge {{ 'b-ok' if s.code == 'customer' else 'b-active' }}" style="margin-right: 6px; font-size: 11px;">{{ s.role }}</span>
+          <code style="font-size: 12.5px; color: #1e293b;">{{ s.login_id }}</code>
+          <span class="muted" style="font-size: 12px; margin-left: 6px;">(pwd: <code>{{ s.password }}</code>)</span>
+          <div class="muted tiny" style="margin-top: 2px;">{{ s.desc }}</div>
+        </div>
+        <button type="button" class="btn small" style="margin-left: 10px; white-space: nowrap;" onclick="fillCreds('{{ s.login_id }}', '{{ s.password }}', '{{ s.role }}')">⚡ Use</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px 12px; font-size: 12px; color: #1e40af; line-height: 1.45;">
+    <strong>Role-Based Access Enforcement:</strong> Each identified role executes under its respective PostgreSQL role (<code>admin_role</code>, <code>customer_role</code>, <code>warehouse_role</code>, <code>procurement_role</code>) with strict table and procedure <code>GRANT/REVOKE</code> permissions.
+  </div>
 </div>
+
+<script>
+function fillCreds(login, pwd, roleName) {
+  document.getElementById('login_id').value = login;
+  document.getElementById('password').value = pwd;
+  var pill = document.getElementById('role-pill');
+  var txt = document.getElementById('role-text');
+  pill.style.display = 'inline-block';
+  pill.className = 'badge b-ok';
+  txt.innerText = 'Selected Role: ' + roleName;
+}
+
+function detectRole(val) {
+  var v = val.toLowerCase().trim();
+  var pill = document.getElementById('role-pill');
+  var txt = document.getElementById('role-text');
+  if (!v) {
+    pill.style.display = 'none';
+    return;
+  }
+  pill.style.display = 'inline-block';
+  if (v.indexOf('admin') !== -1) {
+    pill.className = 'badge b-active';
+    txt.innerText = 'Detected Role: Administrator (Full Control)';
+  } else if (v.indexOf('warehouse') !== -1) {
+    pill.className = 'badge b-confirmed';
+    txt.innerText = 'Detected Role: Warehouse Manager (Inventory)';
+  } else if (v.indexOf('procurement') !== -1) {
+    pill.className = 'badge b-confirmed';
+    txt.innerText = 'Detected Role: Procurement Manager (Suppliers/POs)';
+  } else {
+    pill.className = 'badge b-ok';
+    txt.innerText = 'Detected Role: Customer (Store & Orders)';
+  }
+}
+</script>
 {% endblock %}

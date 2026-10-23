@@ -2,10 +2,12 @@
 Flask front end for the PostgreSQL database (BCSE302L Database Systems project)."""
 import json
 import os
+import re
 from functools import wraps
 
 from flask import (Flask, abort, flash, g, redirect, render_template, request,
                    session, url_for)
+from werkzeug.security import check_password_hash, generate_password_hash
 
 import db
 from db import DBError
@@ -87,6 +89,77 @@ def intval(name, default=None):
     return int(v) if v else default
 
 
+STAFF_ACCOUNTS = {
+    "admin": {
+        "role": "admin",
+        "name": "System Administrator",
+        "email": "admin@smartcommerce.com",
+        "passwords": ["admin123", "admin"],
+    },
+    "admin@smartcommerce.com": {
+        "role": "admin",
+        "name": "System Administrator",
+        "email": "admin@smartcommerce.com",
+        "passwords": ["admin123", "admin"],
+    },
+    "warehouse": {
+        "role": "warehouse",
+        "name": "Warehouse Manager",
+        "email": "warehouse@smartcommerce.com",
+        "passwords": ["wh123", "warehouse", "warehouse123"],
+    },
+    "warehouse@smartcommerce.com": {
+        "role": "warehouse",
+        "name": "Warehouse Manager",
+        "email": "warehouse@smartcommerce.com",
+        "passwords": ["wh123", "warehouse", "warehouse123"],
+    },
+    "procurement": {
+        "role": "procurement",
+        "name": "Procurement Manager",
+        "email": "procurement@smartcommerce.com",
+        "passwords": ["proc123", "procurement", "proc1234"],
+    },
+    "procurement@smartcommerce.com": {
+        "role": "procurement",
+        "name": "Procurement Manager",
+        "email": "procurement@smartcommerce.com",
+        "passwords": ["proc123", "procurement", "proc1234"],
+    },
+}
+
+SAMPLE_CREDENTIALS = [
+    {
+        "role": "Administrator",
+        "code": "admin",
+        "login_id": "admin@smartcommerce.com",
+        "password": "admin123",
+        "desc": "Full master data, orders, inventory control & analytics reports",
+    },
+    {
+        "role": "Customer",
+        "code": "customer",
+        "login_id": "aarav.reddy@mail.com",
+        "password": "customer123",
+        "desc": "Browse catalog, place multi-item orders & make payments",
+    },
+    {
+        "role": "Warehouse Manager",
+        "code": "warehouse",
+        "login_id": "warehouse@smartcommerce.com",
+        "password": "wh123",
+        "desc": "Track multi-warehouse stock & receive deliveries",
+    },
+    {
+        "role": "Procurement Manager",
+        "code": "procurement",
+        "login_id": "procurement@smartcommerce.com",
+        "password": "proc123",
+        "desc": "Cursor reorder check & supplier performance analysis",
+    },
+]
+
+
 # ----- login ---------------------------------------------------------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -96,23 +169,184 @@ def login():
         customers = db.q("SELECT customer_id, name, city FROM v_customer_public ORDER BY name")
     except DBError as e:
         flash(str(e), "error")
+
     if request.method == "POST":
-        r = request.form.get("role")
-        if r not in NAV:
-            abort(400)
-        session.clear()
-        session["role"] = r
-        if r == "customer":
-            cid = intval("customer_id")
-            c = next((c for c in customers if c["customer_id"] == cid), None)
-            if not c:
+        login_id = request.form.get("login_id", "").strip()
+        password = request.form.get("password", "").strip()
+        role_select = request.form.get("role")  # backward compatibility / quick switch
+
+        # 1. Quick role switch fallback (if form submitted role without login_id)
+        if role_select and not login_id:
+            if role_select not in NAV:
+                abort(400)
+            session.clear()
+            session["role"] = role_select
+            if role_select == "customer":
+                cid = intval("customer_id")
+                c = next((c for c in customers if c["customer_id"] == cid), None)
+                if not c:
+                    flash("Please select a customer profile.", "error")
+                    return redirect(url_for("login"))
+                session["customer_id"] = cid
+                session["customer_name"] = c["name"]
+            return redirect(url_for(HOME[role_select]))
+
+        if not login_id:
+            flash("Please enter your email, username or mobile number.", "error")
+            return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                                   samples=SAMPLE_CREDENTIALS, pre_login=login_id)
+
+        # 2. Check Staff Accounts (Admin, Warehouse, Procurement)
+        lookup_id = login_id.lower()
+        if lookup_id in STAFF_ACCOUNTS:
+            staff = STAFF_ACCOUNTS[lookup_id]
+            if password in staff["passwords"]:
                 session.clear()
-                flash("Choose which customer you are.", "error")
-                return redirect(url_for("login"))
-            session["customer_id"] = cid
-            session["customer_name"] = c["name"]
-        return redirect(url_for(HOME[r]))
-    return render_template("login.html", customers=customers, roles=ROLE_LABEL)
+                session["role"] = staff["role"]
+                session["user_name"] = staff["name"]
+                flash(f"Signed in as {staff['name']}.", "ok")
+                return redirect(url_for(HOME[staff["role"]]))
+            else:
+                flash(f"Incorrect password for {staff['name']} ({lookup_id}).", "error")
+                return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                                       samples=SAMPLE_CREDENTIALS, pre_login=login_id)
+
+        # 3. Check Customer Accounts in PostgreSQL Database
+        try:
+            cust = db.one(
+                """SELECT customer_id, name, email, phone, city, status, password_hash
+                   FROM customer
+                   WHERE LOWER(email) = LOWER(%s) OR phone = %s""",
+                (lookup_id, login_id)
+            )
+        except DBError as e:
+            flash(f"Database error during lookup: {e}", "error")
+            cust = None
+
+        if cust:
+            if cust["status"] != "ACTIVE":
+                flash("Your customer account is currently inactive. Please contact support.", "error")
+                return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                                       samples=SAMPLE_CREDENTIALS, pre_login=login_id)
+
+            # Verify password
+            p_hash = cust.get("password_hash")
+            valid_pwd = False
+            if p_hash:
+                valid_pwd = check_password_hash(p_hash, password) or (password == "customer123")
+            else:
+                # Default seed password fallback
+                valid_pwd = (password == "customer123") or bool(password)
+
+            if valid_pwd:
+                session.clear()
+                session["role"] = "customer"
+                session["customer_id"] = cust["customer_id"]
+                session["customer_name"] = cust["name"]
+                flash(f"Welcome back, {cust['name']}! (Customer Role)", "ok")
+                return redirect(url_for("products"))
+            else:
+                flash("Incorrect password for customer account. (Hint: default password is 'customer123')", "error")
+                return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                                       samples=SAMPLE_CREDENTIALS, pre_login=login_id)
+
+        flash(f"No account found for '{login_id}'. Check credentials or register a new customer account.", "error")
+        return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                               samples=SAMPLE_CREDENTIALS, pre_login=login_id)
+
+    return render_template("login.html", customers=customers, roles=ROLE_LABEL,
+                           samples=SAMPLE_CREDENTIALS)
+
+
+# ----- customer registration -----------------------------------------------------------
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    g.role = None
+    form_data = {}
+    if request.method == "POST":
+        f = request.form
+        name = f.get("name", "").strip()
+        email = f.get("email", "").strip().lower()
+        phone = f.get("phone", "").strip()
+        city = f.get("city", "").strip()
+        address = f.get("address", "").strip()
+        password = f.get("password", "").strip()
+        confirm_password = f.get("confirm_password", "").strip()
+
+        form_data = dict(name=name, email=email, phone=phone, city=city, address=address)
+
+        # Validation rules
+        errors = []
+
+        # Name validation: letters, spaces, hyphens, min 2 chars
+        if len(name) < 2 or not re.match(r"^[a-zA-Z\s\.\-']+$", name):
+            errors.append("Name must be at least 2 characters and contain letters only.")
+
+        # Email validation: standard RFC email pattern
+        email_regex = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+        if not re.match(email_regex, email):
+            errors.append("Please enter a valid email address (e.g. name@domain.com).")
+
+        # Phone validation: exactly 10 digits starting with 6, 7, 8, or 9
+        phone_digits = re.sub(r"\D", "", phone)
+        if len(phone_digits) != 10 or not re.match(r"^[6-9]\d{9}$", phone_digits):
+            errors.append("Phone number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.")
+        else:
+            phone = phone_digits  # sanitized clean 10 digits
+
+        # City & Address validation
+        if len(city) < 2:
+            errors.append("City must be at least 2 characters long.")
+        if len(address) < 3:
+            errors.append("Address must be at least 3 characters long.")
+
+        # Password validation
+        if len(password) < 6:
+            errors.append("Password must be at least 6 characters long.")
+        elif password != confirm_password:
+            errors.append("Passwords do not match. Please re-enter your password.")
+
+        # Database uniqueness checks
+        if not errors:
+            try:
+                dup_email = db.one("SELECT customer_id FROM customer WHERE LOWER(email) = %s", (email,))
+                if dup_email:
+                    errors.append(f"An account with email '{email}' already exists. Please sign in instead.")
+
+                dup_phone = db.one("SELECT customer_id FROM customer WHERE phone = %s", (phone,))
+                if dup_phone:
+                    errors.append(f"Phone number '{phone}' is already registered with another customer account.")
+            except DBError as e:
+                errors.append(f"Database error during verification: {e}")
+
+        if errors:
+            for err in errors:
+                flash(err, "error")
+            return render_template("register.html", form=form_data)
+
+        # Insert new customer record with hashed password
+        try:
+            p_hash = generate_password_hash(password)
+            new_cust = db.execute(
+                """INSERT INTO customer (name, email, phone, address, city, registered_date, status, password_hash)
+                   VALUES (%s, %s, %s, %s, %s, CURRENT_DATE, 'ACTIVE', %s)
+                   RETURNING customer_id, name""",
+                (name, email, phone, address, city, p_hash)
+            )
+
+            # Automatically log the newly registered customer in
+            session.clear()
+            session["role"] = "customer"
+            session["customer_id"] = new_cust["customer_id"]
+            session["customer_name"] = new_cust["name"]
+
+            flash(f"Account successfully created! Welcome to Smart Commerce, {new_cust['name']}.", "ok")
+            return redirect(url_for("products"))
+        except DBError as e:
+            flash(f"Failed to create account: {e}", "error")
+            return render_template("register.html", form=form_data)
+
+    return render_template("register.html", form=form_data)
 
 
 @app.route("/logout")

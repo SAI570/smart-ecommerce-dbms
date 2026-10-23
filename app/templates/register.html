@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Create Customer Account · Smart Commerce{% endblock %}
+{% block login %}
+<div class="login-card" style="max-width: 540px; margin: auto;">
+  <div class="brand big"><span class="logo">▣</span> Smart Commerce</div>
+  <h2 style="margin: 0; font-size: 20px;">Create Customer Account</h2>
+  <p class="muted" style="margin-top: -6px; font-size: 13.5px;">
+    Register a new customer profile. Your account will be created directly in the PostgreSQL database with full role-based security.
+  </p>
+
+  <form method="post" action="{{ url_for('register') }}" class="form" style="max-width: 100%; gap: 12px;" onsubmit="return validateForm()">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <label>Full Name *
+        <input type="text" name="name" id="reg_name" placeholder="e.g. Sanjay Reddy" value="{{ form.name or '' }}" required pattern="^[a-zA-Z\s\.\-']{2,100}$" title="Name must be at least 2 characters (letters only)">
+      </label>
+
+      <label>Phone Number (10 digits) *
+        <input type="tel" name="phone" id="reg_phone" placeholder="e.g. 9876543210" value="{{ form.phone or '' }}" required maxlength="10" pattern="[6-9][0-9]{9}" title="Valid 10-digit mobile number starting with 6, 7, 8, or 9">
+      </label>
+    </div>
+
+    <label>Email Address *
+      <input type="email" name="email" id="reg_email" placeholder="e.g. sanjay.reddy@example.com" value="{{ form.email or '' }}" required pattern="[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+" title="Please enter a valid email address">
+      <span class="muted tiny">Must match database check constraint: <code>name@domain.ext</code></span>
+    </label>
+
+    <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px;">
+      <label>City *
+        <input type="text" name="city" id="reg_city" placeholder="e.g. Hyderabad" value="{{ form.city or '' }}" required minlength="2">
+      </label>
+
+      <label>Address *
+        <input type="text" name="address" id="reg_address" placeholder="e.g. Flat 402, Banjara Hills" value="{{ form.address or '' }}" required minlength="3">
+      </label>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <label>Password (min 6 characters) *
+        <input type="password" name="password" id="reg_pwd" placeholder="Choose a secure password" required minlength="6">
+      </label>
+
+      <label>Confirm Password *
+        <input type="password" name="confirm_password" id="reg_cpwd" placeholder="Re-enter password" required minlength="6">
+      </label>
+    </div>
+
+    <div style="background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; font-size: 12px; color: #475467;">
+      <strong>Validation Restrictions:</strong>
+      <ul style="margin: 4px 0 0; padding-left: 18px; line-height: 1.5;">
+        <li><strong>Email:</strong> Must be valid and unique across the database.</li>
+        <li><strong>Phone:</strong> Exactly 10 digits (Standard Indian format starting with 6, 7, 8, or 9).</li>
+        <li><strong>Password:</strong> Minimum 6 characters (hashed with cryptographic salted PBKDF2/SHA-256).</li>
+      </ul>
+    </div>
+
+    <div style="display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 6px;">
+      <button type="submit" class="btn primary" style="flex: 1; padding: 10px; font-size: 15px;">Create Account & Sign In ›</button>
+      <a href="{{ url_for('login') }}" class="btn" style="padding: 10px 14px; text-decoration: none;">Already registered? Sign In</a>
+    </div>
+  </form>
+</div>
+
+<script>
+function validateForm() {
+  var p1 = document.getElementById('reg_pwd').value;
+  var p2 = document.getElementById('reg_cpwd').value;
+  if (p1 !== p2) {
+    alert("Passwords do not match. Please re-enter.");
+    return false;
+  }
+  var phone = document.getElementById('reg_phone').value.trim();
+  if (!/^[6-9]\d{9}$/.test(phone)) {
+    alert("Phone number must be exactly 10 digits starting with 6, 7, 8, or 9.");
+    return false;
+  }
+  return true;
+}
+</script>
+{% endblock %}

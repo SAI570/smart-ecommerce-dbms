@@ -17,6 +17,7 @@ CREATE TABLE customer (
     phone            VARCHAR(15),
     address          VARCHAR(200),
     city             VARCHAR(60),
+    password_hash    VARCHAR(255),
     registered_date  DATE          NOT NULL DEFAULT CURRENT_DATE,
     status           VARCHAR(10)   NOT NULL DEFAULT 'ACTIVE'
                      CHECK (status IN ('ACTIVE','INACTIVE')),
